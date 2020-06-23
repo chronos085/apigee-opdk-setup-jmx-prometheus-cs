@@ -1,0 +1,5 @@
+---
+opdk_user_name: 'apigee'
+opdk_group_name: 'apigee'
+opdk_agent_jmx: "/opt/agent"
+

@@ -1,0 +1,62 @@
+---
+- name: Create installer path
+  become: yes
+  file:
+    path: "{{ opdk_agent_jmx }}"
+    state: directory
+    owner: "{{ opdk_user_name }}"
+    group: "{{ opdk_group_name }}"
+
+- name: Copy a file on the remote machine for editing
+  become: yes
+  copy:
+    src: "{{ opdk_src_agent_prometheus }}"
+    dest: "/opt/agent/jmx_prometheus_javaagent-0.3.1.jar"
+
+- name: Construct the Target Edge file Folder Path
+  set_fact:
+    cacheable: yes
+    target_mail_config_file_path: "{{ opdk_agent_jmx }}/{{ opdk_file_jmx }}"
+
+- name: Assert Permissions are Correct
+  become: yes
+  file:
+    path: "{{ opdk_agent_jmx | dirname }}"
+    recurse: yes
+    mode: "777"
+    owner: '{{ opdk_user_name }}'
+    group: '{{ opdk_group_name }}'
+    
+- block:
+  - name: Construct the local Edge response file path
+    set_fact:
+      cacheable: yes
+      local_mail_config_file_path: "{{ local_apigee_secure_path }}/{{ opdk_file_jmx }}"
+
+  - name: Create Local Response File Folder
+    become: yes
+    file:
+      path: "{{ local_apigee_secure_path }}"
+      state: directory
+    
+- name: Construct the mail config file
+  become: yes
+  template:
+    src: 'jmx_prometheus.yaml.j2'
+    dest: "{{ target_mail_config_file_path }}"
+    mode: 777
+    owner: "{{ opdk_user_name }}"
+    group: "{{ opdk_group_name }}"
+
+- name: Remove local config file
+  file:
+    path: "{{ local_mail_config_file_path }}"
+    state: absent
+  delegate_to: 127.0.0.1
+
+- name: Download a copy of the config file
+  become: yes
+  fetch:
+    src: "{{ target_mail_config_file_path }}"
+    dest: "{{ local_mail_config_file_path }}"
+    flat: "yes"
